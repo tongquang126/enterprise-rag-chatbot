@@ -17,3 +17,4 @@ crash.log
 
 # Ignore lock file
 .terraform.lock.hcl
+.terraform
