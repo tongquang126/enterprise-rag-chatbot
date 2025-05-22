@@ -1,0 +1,1 @@
+{"Modules":[{"Key":"","Source":"","Dir":"."},{"Key":"lambda_iam_role","Source":"../../modules/iam/lambda_access","Dir":"../../modules/iam/lambda_access"},{"Key":"s3_internal_docs","Source":"../../modules/s3","Dir":"../../modules/s3"}]}
