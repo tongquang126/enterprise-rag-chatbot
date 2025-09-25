@@ -1,0 +1,111 @@
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/lambda_code"
+  output_path = "${path.module}/lambda_code.zip"
+}
+
+resource "aws_lambda_function" "lambda_processor" {
+  function_name = var.lambda_function_name
+  role          = aws_iam_role.lambda_access.arn
+  handler       = var.handler                        
+  runtime       = var.runtime                        
+  filename      = data.archive_file.lambda_zip.output_path
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+
+  environment {
+    variables = {        
+      BUCKET_NAME = var.bucket_name
+    }
+  }
+
+  vpc_config {
+    subnet_ids         = var.subnet_ids
+    security_group_ids = [aws_security_group.lambda_sg.id]
+  }
+
+  tags = {
+    Name        = var.lambda_function_name
+    Environment = var.environment
+  }
+}
+
+resource "aws_security_group" "lambda_sg" {
+  name        = "lambda-access-sg"
+  description = "Security Group for Lambda to access Aurora PostgreSQL"
+  vpc_id      = var.vpc_id
+
+  # Outbound rule to allow Lambda to connect to Aurora on port 5432
+  egress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [var.aurora_security_group_id]
+  }
+
+  # Allow general internet access for updates/logging
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "Lambda Security Group"
+  }
+}
+
+
+resource "aws_iam_role" "lambda_access" {
+  name = var.lambda_role_name
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        },
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+  tags = {
+    Name = var.lambda_role_name
+  }
+}
+
+resource "aws_iam_policy" "s3_access_policy" {
+  name = "${var.lambda_role_name}-s3-access"
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],  
+        Resource = [
+          var.bucket_arn,        
+          "${var.bucket_arn}/*"  
+        ]
+      }
+    ]
+  })
+}
+
+# VPC execution role for Lambda
+resource "aws_iam_role_policy_attachment" "lambda_vpc_access" {
+  role       = aws_iam_role.lambda_access.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+#AWS-managed basic execution role that allows Lambda to write to CloudWatch
+resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
+  role       = aws_iam_role.lambda_access.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "attach_policy" {
+  role       = aws_iam_role.lambda_access.name
+  policy_arn = aws_iam_policy.s3_access_policy.arn
+}
+

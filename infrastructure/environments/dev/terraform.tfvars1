@@ -1,0 +1,31 @@
+region      = "us-east-1"
+bucket_name = "enterprise-internal-docs-dev"
+# role_name   = "lambda-access-role"
+lambda_role_name   = "lambda-access-role"
+aws_profile = "personal"
+
+db_cluster_identifier   = "my-aurora-dev"
+db_engine_version      = "13.6"
+db_master_username     = "postgres"
+db_master_password     = "!Cso12345"
+backup_retention_period = 1
+preferred_backup_window = "07:00-09:00"
+
+# Subnets for DB subnet group
+subnet_ids = [
+  "subnet-4d04b110",
+  "subnet-f09be294",
+  "subnet-4513a36a"
+]
+
+# VPC ID where subnets and SG reside
+vpc_id = "vpc-f2bdff8a"
+
+min_capacity             = 1
+max_capacity             = 2
+seconds_until_auto_pause = 300
+
+lambda_function_name = "data-ingestion-processor"
+lambda_handler       = "lambda_function.lambda_handler"
+lambda_runtime       = "python3.12"
+db_name              = "rag_db"

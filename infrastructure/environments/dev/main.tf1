@@ -1,0 +1,76 @@
+provider "aws" {
+  region  = var.region
+  profile = var.aws_profile
+}
+
+# Step 1: Create the S3 bucket
+module "s3_internal_docs" {
+  source      = "../../modules/s3"
+  bucket_name = var.bucket_name
+  environment = "dev"                                
+}
+
+# Step 2: Create Lambda Function
+module "lambda_processor" {                          # MODIFIED: Renamed from lambda_data_ingestion
+  source               = "../../modules/lambda_processor"
+  lambda_function_name = var.lambda_function_name
+  lambda_role_name           = var.lambda_role_name                # ADDED: Missing variable
+  handler             = var.lambda_handler
+  runtime             = var.lambda_runtime
+  bucket_name         = var.bucket_name
+  s3_bucket_arn       = module.s3_internal_docs.bucket_arn
+  environment_vars    = {                            # MODIFIED: Fixed structure
+    DB_HOST     = module.aurora_db.db_cluster_endpoint
+    DB_NAME     = var.db_name
+    DB_USER     = var.db_master_username
+    DB_PASSWORD = var.db_master_password
+  }
+  subnet_ids          = var.subnet_ids
+  security_group_ids  = [module.lambda_processor.lambda_security_group_id]  # MODIFIED: Use module output
+  vpc_id              = var.vpc_id
+  aurora_security_group_id = module.aurora_db.aurora_security_group_id
+}
+
+# Step 3: Create Aurora PostgreSQL
+module "aurora_db" {
+  source                   = "../../modules/aurora_postgresql"
+  # cluster_identifier       = var.db_cluster_identifier
+  # engine_version          = var.db_engine_version
+  # master_username         = var.db_master_username
+  # master_password         = var.db_master_password
+  # backup_retention_period = var.backup_retention_period
+  # preferred_backup_window = var.preferred_backup_window
+  # min_capacity            = var.min_capacity
+  # max_capacity            = var.max_capacity
+  # seconds_until_auto_pause = var.seconds_until_auto_pause
+  # subnet_ids              = var.subnet_ids
+  # vpc_id                  = var.vpc_id
+  lambda_security_group_id = module.lambda_processor.lambda_security_group_id  
+}
+
+# Step 4: Create bucket policy to allow Lambda role access
+resource "aws_s3_bucket_policy" "lambda_access" {
+  bucket = module.s3_internal_docs.bucket_name
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Sid       = "AllowLambdaAccess",
+        Effect    = "Allow",
+        Principal = {
+          AWS = module.lambda_processor.role_arn       # MODIFIED: Updated module reference
+        },
+        Action    = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:ListBucket"                             # ADDED: ListBucket permission
+        ],
+        Resource  = [
+          module.s3_internal_docs.bucket_arn,         # ADDED: Bucket ARN for ListBucket
+          "${module.s3_internal_docs.bucket_arn}/*"   # Object ARN
+        ]
+      }
+    ]
+  })
+}

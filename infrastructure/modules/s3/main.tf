@@ -3,7 +3,6 @@ resource "aws_s3_bucket" "internal_docs" {
   force_destroy = false
   tags = {
     Name        = var.bucket_name
-    Environment = "dev"
   }
 }
 
@@ -16,7 +15,7 @@ resource "aws_s3_bucket_public_access_block" "block_public_access" {
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "encryption" {
-  bucket = aws_s3_bucket.internal_docs.id
+  bucket = aws_s3_bucket.internal_docs.bucket
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"

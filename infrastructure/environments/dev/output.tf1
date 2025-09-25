@@ -1,0 +1,27 @@
+output "aurora_endpoint" {
+  value = module.aurora_db.db_cluster_endpoint
+}
+
+output "aurora_cluster_id" {
+  value = module.aurora_db.db_cluster_identifier
+}
+
+output "aurora_subnet_group" {
+  value = module.aurora_db.db_subnet_group
+}
+
+output "aurora_security_group_id" {
+  value = module.aurora_db.aurora_security_group_id
+}
+
+output "lambda_function_name" {                      # ADDED: Missing output
+  value = module.lambda_processor.lambda_function_name
+}
+
+output "lambda_security_group_id" {                  # ADDED: Missing output
+  value = module.lambda_processor.lambda_security_group_id
+}
+
+output "s3_bucket_name" {                           # ADDED: Missing output
+  value = module.s3_internal_docs.bucket_name
+}

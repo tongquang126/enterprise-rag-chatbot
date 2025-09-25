@@ -1,0 +1,106 @@
+variable "region" {
+  description = "AWS region"
+  type        = string
+  default = "us-east-1"
+}
+
+variable "aws_profile" {
+  description = "AWS CLI profile to use"
+  type        = string
+  default     = "personal"  
+}
+
+variable "bucket_name" {
+  description = "Name of the internal documents S3 bucket"
+  type        = string
+  default     = "enterprise-internal-docs-dev"
+}
+
+variable "lambda_role_name" {
+  description = "Name of the IAM role for Lambda function"
+  type        = string
+}
+
+# Variables for Aurora DB cluster
+variable "db_cluster_identifier" {
+  description = "Identifier for the Aurora DB cluster"
+  type        = string
+  default     = "aurora-dev-cluster"
+}
+
+variable "db_name" {
+  description = "Name of the default database"
+  type        = string
+  default     = "devdb"
+}
+
+variable "db_engine_version" {
+  description = "Engine version for Aurora PostgreSQL"
+  type        = string
+  default     = "13.9"
+}
+
+variable "db_master_username" {
+  description = "Master username for the database"
+  type        = string
+  default     = "postgres"
+}
+
+variable "db_master_password" {
+  description = "Master password for the database"
+  type        = string
+  sensitive   = true
+}
+
+variable "backup_retention_period" {
+  type    = number
+  default = 1
+}
+
+variable "preferred_backup_window" {
+  type    = string
+  default = "07:00-09:00"
+}
+
+variable "min_capacity" {
+  type    = number
+  default = 1
+}
+
+variable "max_capacity" {
+  type    = number
+  default = 2
+}
+
+variable "seconds_until_auto_pause" {
+  type    = number
+  default = 300
+}
+
+variable "subnet_ids" {
+  type    = list(string)
+  default = ["subnet-4d04b110", "subnet-f09be294", "subnet-4513a36a"]
+}
+
+variable "vpc_id" {
+  type    = string
+  default = "vpc-f2bdff8a"
+}
+
+variable "lambda_function_name" {
+  description = "Name of the Lambda function"
+  default     = "data-ingestion-processor"
+  type        = string
+}
+
+variable "lambda_handler" {
+  description = "Handler for the Lambda function"
+  type        = string
+  default     = "lambda_function.lambda_handler"
+}
+
+variable "lambda_runtime" {
+  description = "Runtime for the Lambda function"
+  type        = string
+  default     = "python3.12"
+}
