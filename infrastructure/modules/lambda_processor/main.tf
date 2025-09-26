@@ -43,6 +43,29 @@ resource "aws_lambda_function" "this" {
   # tham chiếu đúng sang data.archive_file
   filename         = data.archive_file.lambda_zip.output_path
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+  vpc_config {
+    subnet_ids         = var.private_subnet_ids   # private subnets dùng chung với RDS
+    security_group_ids = [aws_security_group.lambda_sg.id]
+  }
+}
+###############################
+# Security Group for Lambda
+###############################
+resource "aws_security_group" "lambda_sg" {
+  name        = "${var.lambda_name}-sg"
+  description = "Allow Lambda to access RDS"
+  vpc_id      = var.vpc_id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"] # Only connect to outside 
+  }
+
+  tags = {
+    Name = "${var.lambda_name}-sg"
+  }
 }
 
 ###############################
@@ -70,4 +93,34 @@ resource "aws_s3_bucket_notification" "s3_lambda_trigger" {
   depends_on = [
     aws_lambda_permission.allow_s3
   ]
+}
+
+###############################
+# Allow Lambda to read Secrets Manager
+# Use inline IAM policy only allow Lambda read specific Secret
+###############################
+resource "aws_iam_policy" "lambda_secret_policy" {
+  name        = "${var.lambda_name}-secret-policy"
+  description = "Allow Lambda to read RDS secret"
+  policy      = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ],
+        Effect   = "Allow",
+        Resource = var.db_secret_arn
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_secret_attach" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = aws_iam_policy.lambda_secret_policy.arn
+}
+
+output "lambda_sg_id" {
+  value = aws_security_group.lambda_sg.id
 }
